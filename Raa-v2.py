@@ -1681,7 +1681,7 @@ def main():
     with st.sidebar:
         api_key = st.text_input("Your Access Key", type="password")
         if not api_key:
-            st.warning("Please enter your OpenAI API key to continue.")
+            st.warning("Please enter your Access key to continue.")
             return
 
     if 'current_step' not in st.session_state:
