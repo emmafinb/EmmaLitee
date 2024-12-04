@@ -1679,7 +1679,7 @@ def main():
     render_header()
 
     with st.sidebar:
-        api_key = st.text_input("OpenAI API Key", type="password")
+        api_key = st.text_input("Your Access Key", type="password")
         if not api_key:
             st.warning("Please enter your OpenAI API key to continue.")
             return
