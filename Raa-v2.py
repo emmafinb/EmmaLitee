@@ -1114,7 +1114,12 @@ def clean_text(text):
     """Clean and format text by removing unwanted formatting while preserving structure"""
     if not text:
         return ""
-    
+    text = text.replace('<br>', ' ')
+    text = text.replace('</br>', ' ')
+
+    # Remove other potential problematic HTML tags
+    text = text.replace('<para>', '')
+    text = text.replace('</para>', '')
     # Remove style tags
     text = re.sub(r'<userStyle>.*?</userStyle>', '', text)
     
