@@ -1114,14 +1114,11 @@ def clean_text(text):
     """Clean and format text by removing unwanted formatting while preserving structure"""
     if not text:
         return ""
-    text = text.replace('<br>', ' ')
-    text = text.replace('</br>', ' ')
-
-    # Remove other potential problematic HTML tags
-    text = text.replace('<para>', '')
-    text = text.replace('</para>', '')
-    # Remove style tags
+    
+    # Remove style and HTML tags
     text = re.sub(r'<userStyle>.*?</userStyle>', '', text)
+    text = re.sub(r'<br\s*/?>|<para>|</para>', ' ', text)  # Replace <br>, <para> tags with space
+    text = re.sub(r'<[^>]+>', '', text)  # Remove any other HTML tags
     
     # Remove Markdown formatting while preserving structure
     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)  # Bold
@@ -1136,10 +1133,19 @@ def clean_text(text):
     # Handle headers while preserving hierarchy
     text = re.sub(r'^#{1,6}\s*(.+)$', r'\1', text, flags=re.MULTILINE)
     
+    # Fix multiple spaces
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Handle bullet points
+    text = re.sub(r'^\s*-\s*', '• ', text, flags=re.MULTILINE)
+    
     # Preserve paragraph structure
     paragraphs = text.split('\n\n')
     paragraphs = [' '.join(p.split()) for p in paragraphs]
     text = '\n\n'.join(paragraphs)
+    
+    # Remove any remaining <userStyle>Normal</userStyle> tags
+    text = text.replace('<userStyle>Normal</userStyle>', '')
     
     return text.strip()
 
