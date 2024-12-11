@@ -63,7 +63,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 import ssl
 import logging
-
+# 11/12/2024
 # Email Configuration
 EMAIL_SENDER = "emma@ceaiglobal.com"
 EMAIL_PASSWORD = "MyFinB2024123#"
@@ -167,9 +167,11 @@ ESG_READINESS_QUESTIONS = {
         "No, we haven't started yet.",
         "Yes, we've started basic efforts but lack a structured plan.",
         "Yes, we have a formalized ESG framework in place.",
-        "Yes, we are actively implementing and reporting ESG practices."
+        "Yes, we are actively implementing and reporting ESG practices.",
+        "Yes, practices are monitored, tracked to work towards our ESG goals."
     ],
     "2. What is your primary reason for considering ESG initiatives?": [
+        "To regularise because of sanctions imposed by regulators",
         "To comply with regulations and avoid penalties.",
         "To improve reputation and meet stakeholder demands.",
         "To attract investors or access green funding.",
@@ -179,27 +181,60 @@ ESG_READINESS_QUESTIONS = {
         "No, there is no one currently assigned to ESG matters.",
         "Yes, but they are not exclusively focused on ESG.",
         "Yes, we have a dedicated ESG team or officer.",
-        "Yes, and we also involve external advisors for support."
+        "Yes, and we also involve external advisors for support.",
+        "There is a framework with top-down board involvement."
     ],
     "4. Are you aware of the ESG standards relevant to your industry?": [
         "No, I am unfamiliar with industry-specific ESG standards.",
         "I've heard of them but don't fully understand how to apply them.",
         "Yes, I am somewhat familiar and have started researching.",
-        "Yes, and we have begun aligning our operations with these standards."
+        "Yes, and we have begun aligning our operations with these standards.",
+        "Have full frameworks for compliance with all required standards."
     ],
     "5. Do you currently measure your environmental or social impacts?": [
         "No, we have not started measuring impacts.",
         "Yes, we measure basic indicators (e.g., waste, energy use).",
+        "Yes, we measure basic Scope1/Scope2 and less than 2 parameters S3 with no tracking system.",
         "Yes, we track a range of metrics but need a better system.",
         "Yes, we have comprehensive metrics with detailed reports."
     ],
     "6. What is your biggest challenge in starting or scaling ESG initiatives?": [
-        "Lack of knowledge and expertise.",
+        "Lack of knowledge, awareness and expertise.",
         "Insufficient budget and resources.",
+        "No ESG Culture",
         "Difficulty aligning ESG goals with business priorities.",
         "Regulatory complexity and compliance requirements."
+    ],
+    "7. Carbon Footprint/GHG Protocol": [
+        "No carbon footprint calculations.",
+        "Scope 1/Scope 2 internally available - not published.",
+        "Scope 1/Scope 2 published - websites etc.",
+        "Working towards targets for carbon footprint reduction.",
+        "Aligned with international guidelines (under guidelines of GHG Protocol, SDG Goals etc)."
+    ],
+    "8. Other parameters": [
+        "No detailed parameter calculations.",
+        "Scope 1/Scope 2 internally available - not published.",
+        "Scope 1/Scope 2 published - websites etc.",
+        "Working towards targets for carbon footprint reduction.",
+        "Aligned with international guidelines (under guidelines of GHG Protocol, SDG Goals etc)."
+    ],
+    "9. Social": [
+        "No detailed parameter calculations.",
+        "Minimum compliance, penalized from regulatory bodies in past 3 years.",
+        "Compliant with local/international human rights/labour law compliance standards.",
+        "Compliant - no sanctions, detailed parameters (Diversity numbers, Employee participation, Inclusion policies published online).",
+        "As above, having received compliance recognition from regulatory bodies."
+    ],
+    "10. Governance": [
+        "No ESG dedicated team.",
+        "Very basic governance.",
+        "Governance policies (ABC, Code of Conduct) published in website.",
+        "Very comprehensive policy with dedicated ESG head.",
+        "Governance aligned with international standard practices."
     ]
 }
+
 import pandas as pd
 from io import BytesIO
 
@@ -320,10 +355,10 @@ class PDFWithTOC(SimpleDocTemplate):
         SimpleDocTemplate.__init__(self, *args, **kwargs)
         self.page_numbers = {}
         self.current_page = 1
-        # Store company name from personal_info
+        # Store both company name and personal info
         if 'personal_info' in kwargs:
             self.company_name = kwargs['personal_info'].get('name', '')
-            # Remove it from kwargs before passing to parent
+            self.personal_info = kwargs['personal_info']  # Store the full personal info
             del kwargs['personal_info']
 
     def afterPage(self):
@@ -335,11 +370,246 @@ class PDFWithTOC(SimpleDocTemplate):
             if style == 'heading':
                 text = flowable.getPlainText()
                 self.page_numbers[text] = self.current_page
+def create_esg_score_charts(scores, styles, elements):
+    """Create dashboard-style ESG score visualizations for PDF report"""
+    from reportlab.graphics.shapes import Drawing, String, Rect, Line
+    from reportlab.graphics.charts.barcharts import VerticalBarChart
+    from reportlab.graphics.charts.textlabels import Label
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import inch
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
+    # Custom colors for dashboard
+    PRIMARY_COLOR = colors.black
+    SECONDARY_COLOR = colors.HexColor('#3B82F6')
+    BACKGROUND_COLOR = colors.HexColor('#F3F4F6')
+    TEXT_COLOR = colors.HexColor('#1F2937')
+    BORDER_COLOR = colors.HexColor('#E5E7EB')
+    SUBTEXT_COLOR = colors.HexColor('#6B7280')
+
+    # Create custom paragraph styles
+    title_style = ParagraphStyle(
+        'DashboardTitle',
+        parent=styles['Normal'],
+        fontSize=14,
+        textColor=PRIMARY_COLOR,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold',
+        spaceAfter=15,
+        spaceBefore=10
+    )
+
+    metric_value_style = ParagraphStyle(
+        'MetricValue',
+        parent=styles['Normal'],
+        fontSize=12,
+        textColor=TEXT_COLOR,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold',
+        spaceAfter=5
+    )
+
+    metric_label_style = ParagraphStyle(
+        'MetricLabel',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor=SUBTEXT_COLOR,
+        alignment=TA_CENTER,
+        spaceBefore=5
+    )
+
+    section_title_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=PRIMARY_COLOR,
+        alignment=TA_LEFT,
+        fontName='Helvetica-Bold',
+        spaceBefore=10,
+        spaceAfter=5
+    )
+
+    # Add dashboard title
+    elements.append(Spacer(1, 0.2*inch))
+    elements.append(Paragraph("ESG Readiness Dashboard", title_style))
+    elements.append(Spacer(1, 0.2*inch))
+
+    # Create metric cards
+    overall_data = [[
+        [
+            Paragraph(f"{scores['overall_score']:.2f}", metric_value_style),
+            Paragraph("Overall Score", metric_label_style)
+        ],
+        [
+            Paragraph(f"{scores['readiness_level']}", metric_value_style),
+            Paragraph("Readiness Level", metric_label_style)
+        ],
+        [
+            Paragraph(f"{(scores['overall_score'] / 5) * 100:.1f}%", metric_value_style),
+            Paragraph("ESG Maturity", metric_label_style)
+        ]
+    ]]
+
+    overall_table = Table(overall_data, colWidths=[2*inch, 2*inch, 2*inch])
+    overall_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), BACKGROUND_COLOR),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('LINEABOVE', (0, 0), (-1, 0), 2, PRIMARY_COLOR),
+        ('TOPPADDING', (0, 0), (-1, -1), 15),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+
+    elements.append(overall_table)
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Create charts with increased height
+    # Category scores chart
+    drawing1 = Drawing(250, 280)  # Increased height further
+    title1 = String(125, 265, 'Category Scores', fontSize=10, textAnchor='middle', fillColor=TEXT_COLOR)
+    drawing1.add(title1)
+
+    bc1 = VerticalBarChart()
+    bc1.x = 35
+    bc1.y = 50  # Increased bottom margin for labels
+    bc1.height = 180
+    bc1.width = 190
+
+    data1 = [list(scores['category_scores'].values())]
+    bc1.data = data1
+
+    bc1.valueAxis.valueMin = 0
+    bc1.valueAxis.valueMax = 5
+    bc1.valueAxis.valueStep = 1
+    bc1.bars[0].fillColor = SECONDARY_COLOR
+    bc1.categoryAxis.categoryNames = list(scores['category_scores'].keys())
+    bc1.categoryAxis.labels.boxAnchor = 'ne'
+    bc1.categoryAxis.labels.angle = 45
+    bc1.categoryAxis.labels.fontSize = 5
+    bc1.categoryAxis.labels.dy = -10  # Increased negative value to move labels down
+    bc1.valueAxis.labels.fontSize = 8
+    bc1.valueAxis.gridStrokeColor = BORDER_COLOR
+    bc1.valueAxis.strokeColor = TEXT_COLOR
+    bc1.categoryAxis.strokeColor = TEXT_COLOR
+
+    drawing1.add(bc1)
+
+    # Question scores chart (match height for consistency)
+    drawing2 = Drawing(250, 280)  # Match new height
+    title2 = String(125, 265, 'Question Scores', fontSize=10, textAnchor='middle', fillColor=TEXT_COLOR)
+    drawing2.add(title2)
+
+
+    bc2 = VerticalBarChart()
+    bc2.x = 35
+    bc2.y = 30
+    bc2.height = 180  # Increased height to match
+    bc2.width = 190
+
+    data2 = [list(scores['individual_scores'].values())]
+    bc2.data = data2
+
+    bc2.valueAxis.valueMin = 0
+    bc2.valueAxis.valueMax = 5
+    bc2.valueAxis.valueStep = 1
+    bc2.bars[0].fillColor = SECONDARY_COLOR
+    q_labels = [f"Q{i+1}" for i in range(len(scores['individual_scores']))]
+    bc2.categoryAxis.categoryNames = q_labels
+    bc2.categoryAxis.labels.boxAnchor = 'ne'
+    bc2.categoryAxis.labels.fontSize = 8
+    bc2.categoryAxis.labels.dy = -15
+    bc2.valueAxis.labels.fontSize = 8
+    bc2.valueAxis.gridStrokeColor = BORDER_COLOR
+    bc2.valueAxis.strokeColor = TEXT_COLOR
+    bc2.categoryAxis.strokeColor = TEXT_COLOR
+
+    drawing2.add(bc2)
+
+    # Create a table for charts
+    charts_table = Table([[drawing1, drawing2]], colWidths=[250, 250])
+    charts_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), BACKGROUND_COLOR),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOX', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('GRID', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('TOPPADDING', (0, 0), (-1, -1), 15),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+    ]))
+
+    elements.append(charts_table)
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Score interpretation table
+    elements.append(PageBreak())
+    elements.append(Paragraph("Score Ranges & Maturity Levels", section_title_style))
+    elements.append(Spacer(1, 0.15*inch))
+
+    interpretation_data = [
+        ["Score Range", "Maturity Level"],
+        ["1.0-1.5", "Initial Stage"],
+        ["1.6-2.5", "Developing"],
+        ["2.6-3.5", "Established"],
+        ["3.6-4.5", "Advanced"],
+        ["4.6-5.0", "Leading"]
+    ]
+
+    interpretation_table = Table(interpretation_data, colWidths=[1.5*inch, 2*inch])
+    interpretation_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E5E7EB')),
+        ('BACKGROUND', (0, 1), (-1, -1), BACKGROUND_COLOR),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('BOX', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+
+    elements.append(interpretation_table)
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Detailed scores table
+    elements.append(Paragraph("Detailed Question Analysis", section_title_style))
+    elements.append(Spacer(1, 0.15*inch))
+
+    question_data = [["Question", "Score"]]
+    question_data.extend([[question, f"{score:.2f}"] for question, score in scores['individual_scores'].items()])
+
+    question_table = Table(question_data, colWidths=[5*inch, 0.5*inch])
+    question_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), BACKGROUND_COLOR),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+        ('GRID', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('BOX', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E5E7EB')),
+    ]))
+
+    elements.append(question_table)
+    elements.append(Spacer(1, 0.2*inch))
+    elements.append(PageBreak())
 def generate_pdf(esg_data, personal_info, toc_page_numbers):
     buffer = io.BytesIO()
     
-    # Pass personal_info to PDFWithTOC
+    # Initialize PDF document
     doc = PDFWithTOC(
         buffer,
         pagesize=letter,
@@ -347,9 +617,10 @@ def generate_pdf(esg_data, personal_info, toc_page_numbers):
         leftMargin=inch,
         topMargin=1.5*inch,
         bottomMargin=inch,
-        personal_info=personal_info  # Add this line
+        personal_info=personal_info
     )
     
+    # Define frames for different page types
     full_page_frame = Frame(
         0, 0, letter[0], letter[1],
         leftPadding=0, rightPadding=0,
@@ -372,19 +643,49 @@ def generate_pdf(esg_data, personal_info, toc_page_numbers):
         id='disclaimer'
     )
     
+    # Define cover page function with text overlay
+    def cover_page(canvas, doc):
+        """Draw the cover page with image and text overlay"""
+        canvas.saveState()
+        try:
+            # Load and draw the background image (only once)
+            if os.path.exists("frontemma.jpg"):
+                canvas.drawImage(
+                    "frontemma.jpg",
+                    0, 0,
+                    width=letter[0],
+                    height=letter[1],
+                    preserveAspectRatio=False  # Ensure full-page coverage
+                )
+
+            # Draw organization name
+                canvas.setFont("Helvetica", 24)
+                org_name = f"{doc.personal_info.get('name', '')}"
+                canvas.setFillColorRGB(1, 1, 1)  # Set text color to white
+                org_name = f"{doc.personal_info.get('name', '')}"
+                # Set coordinates for the top-left corner
+                x = doc.leftMargin  # Use left margin for alignment
+                y = letter[1] - doc.topMargin  # Top margin distance from the top of the page
+
+                # Draw the string
+                canvas.drawString(x, y, org_name)
+        except Exception as e:
+            print(f"Error in cover_page function: {str(e)}")
+        finally:
+            canvas.restoreState()
+
+    # Define page templates
     templates = [
-        PageTemplate(id='First', frames=[full_page_frame],
-                    onPage=lambda canvas, doc: None),
-        PageTemplate(id='Later', frames=[normal_frame],
-                    onPage=create_header_footer),
-        PageTemplate(id='dis', frames=[normal_frame],
-                    onPage=create_header_footer_disclaimer)
+        PageTemplate(id='Cover', frames=[full_page_frame], onPage=cover_page),
+        PageTemplate(id='Later', frames=[normal_frame], onPage=create_header_footer),
+        PageTemplate(id='dis', frames=[normal_frame], onPage=create_header_footer_disclaimer)
     ]
     doc.addPageTemplates(templates)
     
+    # Create styles
     styles = create_custom_styles()
     
-    # TOC style with right alignment for page numbers
+    # TOC style
     toc_style = ParagraphStyle(
         'TOCEntry',
         parent=styles['normal'],
@@ -398,14 +699,15 @@ def generate_pdf(esg_data, personal_info, toc_page_numbers):
     )
     styles['toc'] = toc_style
     
+    # Initialize elements list
     elements = []
     
-    # Cover page
-    elements.append(NextPageTemplate('First'))
-    if os.path.exists("frontemma.jpg"):
-        img = Image("frontemma.jpg", width=letter[0], height=letter[1])
-        elements.append(img)
+    # Add cover page
+    # elements.append(NextPageTemplate('Cover'))
+    # elements.append(Spacer(1, letter[1]))
+    # elements.append(PageBreak())
     
+    # Switch to normal pages and add TOC
     elements.append(NextPageTemplate('Later'))
     elements.append(PageBreak())
     elements.append(Paragraph("Table of Contents", styles['heading']))
@@ -420,50 +722,211 @@ def generate_pdf(esg_data, personal_info, toc_page_numbers):
         ("SROI Analysis", esg_data['sroi'])
     ]
     
-    # Format TOC entries with dots and manual page numbers
+    # Format TOC entries
     def create_toc_entry(num, title, page_num):
         title_with_num = f"{num}. {title}"
         dots = '.' * (50 - len(title_with_num))
         return f"{title_with_num} {dots} {page_num}"
 
-    # First add the static Executive Summary entry
-    static_entry = create_toc_entry(1, "Profile Analysis", 3)  # 3 is the page number
+    # Add TOC entries
+    static_entry = create_toc_entry(1, "Profile Analysis", 3)
     elements.append(Paragraph(static_entry, toc_style))
-
-    # Then continue with the dynamic entries, starting from number 2
+    
     for i, ((title, _), page_num) in enumerate(zip(section_data, toc_page_numbers), 2):
         toc_entry = create_toc_entry(i, title, page_num)
         elements.append(Paragraph(toc_entry, toc_style))
     
     elements.append(PageBreak())
     
-    # Content pages
+    # Add content pages
     elements.extend(create_second_page(styles, personal_info))
     elements.append(PageBreak())
     
-    # Main content
+    # Add ESG scores chart if available
+    
+    # Add main content
     for i, (title, content) in enumerate(section_data):
         elements.append(Paragraph(title, styles['heading']))
         process_content(content, styles, elements)
         if i < len(section_data) - 1:
             elements.append(PageBreak())
     
-    # Disclaimer
+    # Add disclaimer
     elements.append(NextPageTemplate('dis'))
     elements.append(PageBreak())
     create_disclaimer_page(styles, elements)
     
-    # Back cover
-    elements.append(NextPageTemplate('First'))
+    # Add back cover
+    elements.append(NextPageTemplate('Cover'))
     elements.append(PageBreak())
     if os.path.exists("backemma.png"):
         img = Image("backemma.png", width=letter[0], height=letter[1])
         elements.append(img)
     
+    # Build the PDF
     doc.build(elements, canvasmaker=NumberedCanvas)
     buffer.seek(0)
     return buffer
+def generate_pdf_summary(summary_data, personal_info, toc_page_numbers):
+    buffer = io.BytesIO()
+    
+    # Initialize PDF document
+    doc = PDFWithTOC(
+        buffer,
+        pagesize=letter,
+        rightMargin=inch,
+        leftMargin=inch,
+        topMargin=1.5*inch,
+        bottomMargin=inch,
+        personal_info=personal_info
+    )
+    
+    # Define frames for different page types
+    full_page_frame = Frame(
+        0, 0, letter[0], letter[1],
+        leftPadding=0, rightPadding=0,
+        topPadding=0, bottomPadding=0
+    )
+    
+    normal_frame = Frame(
+        doc.leftMargin,
+        doc.bottomMargin,
+        doc.width,
+        doc.height,
+        id='normal'
+    )
+    
+    disclaimer_frame = Frame(
+        doc.leftMargin,
+        doc.bottomMargin,
+        doc.width,
+        doc.height,
+        id='disclaimer'
+    )
+    
+    # Define cover page function with text overlay
+    def cover_page(canvas, doc):
+        """Draw the cover page with image and text overlay"""
+        canvas.saveState()
+        try:
+            # Load and draw the background image (only once)
+            if os.path.exists("frontemma.jpg"):
+                canvas.drawImage(
+                    "frontemma.jpg",
+                    0, 0,
+                    width=letter[0],
+                    height=letter[1],
+                    preserveAspectRatio=False  # Ensure full-page coverage
+                )
 
+            # Draw organization name
+                canvas.setFont("Helvetica", 24)
+                org_name = f"{doc.personal_info.get('name', '')}"
+                canvas.setFillColorRGB(1, 1, 1)  # Set text color to white
+                org_name = f"{doc.personal_info.get('name', '')}"
+                # Set coordinates for the top-left corner
+                x = doc.leftMargin  # Use left margin for alignment
+                y = letter[1] - doc.topMargin  # Top margin distance from the top of the page
+
+                # Draw the string
+                canvas.drawString(x, y, org_name)
+        except Exception as e:
+            print(f"Error in cover_page function: {str(e)}")
+        finally:
+            canvas.restoreState()
+
+    # Define page templates
+    templates = [
+        PageTemplate(id='Cover', frames=[full_page_frame], onPage=cover_page),
+        PageTemplate(id='Later', frames=[normal_frame], onPage=create_header_footer),
+        PageTemplate(id='dis', frames=[normal_frame], onPage=create_header_footer_disclaimer)
+    ]
+    doc.addPageTemplates(templates)
+    
+    # Create styles
+    styles = create_custom_styles()
+    
+    # TOC style
+    toc_style = ParagraphStyle(
+        'TOCEntry',
+        parent=styles['normal'],
+        fontSize=12,
+        leading=20,
+        leftIndent=20,
+        rightIndent=30,
+        spaceBefore=10,
+        spaceAfter=10,
+        fontName='Helvetica'
+    )
+    styles['toc'] = toc_style
+    
+    # Initialize elements list
+    elements = []
+    
+    # Add cover page
+    # elements.append(NextPageTemplate('Cover'))
+    # elements.append(Spacer(1, letter[1]))
+    # elements.append(PageBreak())
+    
+    # Switch to normal pages and add TOC
+    elements.append(NextPageTemplate('Later'))
+    elements.append(PageBreak())
+    elements.append(Paragraph("Table of Contents", styles['heading']))
+    
+    # Section data
+    section_data = [
+        ("Executive Summary", summary_data['summary'])
+    ]
+    
+    # Format TOC entries
+    def create_toc_entry(num, title, page_num):
+        title_with_num = f"{num}. {title}"
+        dots = '.' * (50 - len(title_with_num))
+        return f"{title_with_num} {dots} {page_num}"
+
+    # Add TOC entries
+    static_entry = create_toc_entry(1, "Profile Analysis", 3)
+    elements.append(Paragraph(static_entry, toc_style))
+    static_entry = create_toc_entry(2, "ESG Dashboard", 4)
+    elements.append(Paragraph(static_entry, toc_style))
+    
+    for i, ((title, _), page_num) in enumerate(zip(section_data, toc_page_numbers), 2):
+        toc_entry = create_toc_entry(i, title, page_num)
+        elements.append(Paragraph(toc_entry, toc_style))
+    
+    elements.append(PageBreak())
+    
+    # Add content pages
+    elements.extend(create_second_page(styles, personal_info))
+    elements.append(PageBreak())
+    
+    # Add ESG scores chart if available
+    if 'esg_scores' in summary_data:
+        create_esg_score_charts(summary_data['esg_scores'], styles, elements)
+    
+    # Add main content
+    for i, (title, content) in enumerate(section_data):
+        elements.append(Paragraph(title, styles['heading']))
+        process_content(content, styles, elements)
+        if i < len(section_data) - 1:
+            elements.append(PageBreak())
+    
+    # Add disclaimer
+    elements.append(NextPageTemplate('dis'))
+    elements.append(PageBreak())
+    create_disclaimer_page(styles, elements)
+    
+    # Add back cover
+    elements.append(NextPageTemplate('Cover'))
+    elements.append(PageBreak())
+    if os.path.exists("backemma.png"):
+        img = Image("backemma.png", width=letter[0], height=letter[1])
+        elements.append(img)
+    
+    # Build the PDF
+    doc.build(elements, canvasmaker=NumberedCanvas)
+    buffer.seek(0)
+    return buffer
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         canvas.Canvas.__init__(self, *args, **kwargs)
@@ -1193,17 +1656,58 @@ def scale_image_to_fit(image_path, max_width, max_height):
         return None
 
 def create_front_page(styles, org_info):
-    """Create a front page using a full-page cover image."""
+    """Create a front page using a full-page cover image with text overlay."""
     elements = []
     
-    if os.path.exists("frontemma.png"):
-        # Create full page image without margins
-        img = Image(
-            "frontemma.png",
-            width=letter[0],     # Full letter width (8.5 inches)
-            height=letter[1]     # Full letter height (11 inches)
+    if os.path.exists("frontemma.jpg"):
+        # Create a template for the first page
+        def first_page(canvas, doc):
+            canvas.saveState()
+            
+            # Draw the background image
+            canvas.drawImage(
+                "frontemma.jpg",
+                0, 0,
+                width=letter[0],
+                height=letter[1],
+                preserveAspectRatio=True
+            )
+            
+            # Add text overlay
+            canvas.setFillColorRGB(1, 1, 1)  # White text
+            canvas.setFont("Helvetica-Bold", 36)
+            
+            # Center the title text
+            title_text = "ESG Assessment Report"
+            title_width = canvas.stringWidth(title_text, "Helvetica-Bold", 36)
+            x_position = (letter[0] - title_width) / 2
+            canvas.drawString(x_position, letter[1] - 3*inch, title_text)
+            
+            # Add organization name
+            canvas.setFont("Helvetica", 24)
+            org_text = f"Organization: {org_info['organization_name']}"
+            org_width = canvas.stringWidth(org_text, "Helvetica", 24)
+            x_position = (letter[0] - org_width) / 2
+            canvas.drawString(x_position, letter[1] - 4*inch, org_text)
+            
+            # Add date
+            canvas.setFont("Helvetica", 18)
+            date_text = f"Date: {org_info['date']}"
+            date_width = canvas.stringWidth(date_text, "Helvetica", 18)
+            x_position = (letter[0] - date_width) / 2
+            canvas.drawString(x_position, letter[1] - 4.5*inch, date_text)
+            
+            canvas.restoreState()
+            
+        # Create a PageTemplate that uses our custom first page layout
+        first_page_template = PageTemplate(
+            id='FirstPage',
+            frames=[Frame(0, 0, letter[0], letter[1], id='normal')],
+            onPage=first_page
         )
-        elements.append(img)
+        elements.append(NextPageTemplate('FirstPage'))
+        elements.append(Spacer(1, letter[1]))  # Add a full-page spacer
+        
     else:
         # Fallback content if image is missing
         elements.extend([
@@ -1217,7 +1721,7 @@ def create_front_page(styles, org_info):
     return elements
 
 def create_header_footer(canvas, doc):
-    """Add header and footer with smaller, transparent images in the top right and a line below the header."""
+    """Add header and footer with adjustments for positioning text, logos, and images."""
     canvas.saveState()
     
     # Register Lato fonts if available
@@ -1232,13 +1736,13 @@ def create_header_footer(canvas, doc):
         bold_font = 'Helvetica-Bold'
     
     if doc.page > 1:  # Only show on pages after the first page
-        # Adjust the position to the top right
-        x_start = doc.width + doc.leftMargin - 1.0 * inch  # Align closer to the right
-        y_position = doc.height + doc.topMargin - 0.1 * inch  # Slightly below the top margin
-        image_width = 0.5 * inch  # Smaller width
-        image_height = 0.5 * inch  # Smaller height
+        # Adjust position for top-right logos
+        x_start = doc.width + doc.leftMargin - 0.5 * inch  # Shift logos slightly to the right
+        y_position = doc.height + doc.topMargin - 0.1 * inch
+        image_width = 0.5 * inch
+        image_height = 0.5 * inch
 
-        # Draw images (ensure they are saved with transparent backgrounds)
+        # Draw logos
         if os.path.exists("ceai.png"):
             canvas.drawImage(
                 "ceai.png", 
@@ -1269,16 +1773,24 @@ def create_header_footer(canvas, doc):
                 mask="auto"
             )
         
-        # Add Header Text using Lato Bold
-        canvas.setFont("Helvetica-Bold", 16)  # Smaller font for company name
+        # Add contact person name
+        canvas.setFont(base_font, 12)
         canvas.drawString(
             doc.leftMargin,
-            doc.height + doc.topMargin - 0.1*inch,  # Position it below the title
+            doc.height + doc.topMargin - 0.03 * inch,  # Higher position for name
+            f"{doc.personal_info.get('full_name', '') if hasattr(doc, 'personal_info') else ''}"
+        )
+        
+        # Add company name below
+        canvas.setFont(base_font, 16)
+        canvas.drawString(
+            doc.leftMargin,
+            doc.height + doc.topMargin - 0.25 * inch,  # Lower position for company
             f"{doc.company_name if hasattr(doc, 'company_name') else ''}"
         )
         
-        # Add line below header (adjusted position to account for company name)
-        line_y_position = doc.height + doc.topMargin - 0.35 * inch  # Moved down to accommodate company name
+        # Adjust line position to be below both texts
+        line_y_position = doc.height + doc.topMargin - 0.45 * inch
         canvas.setLineWidth(0.5)
         canvas.line(
             doc.leftMargin,
@@ -1287,13 +1799,42 @@ def create_header_footer(canvas, doc):
             line_y_position
         )
         
-        # Add footer
+        # Footer - Add image beside text
+        footer_image_path = "raa.png"  # Replace with your image file
+        footer_image_width = 0.5 * inch
+        footer_image_height = 0.5 * inch
+        footer_image_x = doc.leftMargin  # Align to the left margin
+        footer_image_y = 0.5 * inch - footer_image_height / 2  # Match Y-axis with page number
+
+        # Draw the footer image
+        if os.path.exists(footer_image_path):
+            canvas.drawImage(
+                footer_image_path,
+                footer_image_x,
+                footer_image_y,
+                width=footer_image_width,
+                height=footer_image_height,
+                mask="auto"
+            )
+        
+        # Add "Generated on" text aligned with page number
+        footer_text_x = footer_image_x + footer_image_width + 0.2 * inch  # Space after the image
+        footer_text_y = 0.4 * inch  # Align with page number
         canvas.setFont(base_font, 9)
-        canvas.drawString(doc.leftMargin, 0.5 * inch, 
-                         f"Generated on {datetime.datetime.now().strftime('%B %d, %Y at %I:%M %p')}")
-        canvas.drawRightString(doc.width + doc.rightMargin, 0.5 * inch, 
-                             f"Page {doc.page}")
+        canvas.drawString(
+            footer_text_x,
+            footer_text_y,
+            f"Generated on {datetime.datetime.now().strftime('%B %d, %Y at %I:%M %p')}"
+        )
+        
+        # Add page number on the right
+        canvas.drawRightString(
+            doc.width + doc.rightMargin,
+            0.4 * inch,  # Align with the footer text
+            f"Page {doc.page}"
+        )
     canvas.restoreState()
+
 def create_header_footer_disclaimer(canvas, doc):
     """Add header and footer with smaller, transparent images in the top right and a line below the header."""
     canvas.saveState()
@@ -1340,9 +1881,32 @@ def create_header_footer_disclaimer(canvas, doc):
         canvas.line(doc.leftMargin, line_y_position, doc.width + doc.rightMargin, line_y_position)
 
         # Footer
+        footer_image_path = "raa.png"  # Replace with your image file
+        footer_image_width = 0.5 * inch
+        footer_image_height = 0.5 * inch
+        footer_image_x = doc.leftMargin  # Align to the left margin
+        footer_image_y = 0.5 * inch - footer_image_height / 2  # Match Y-axis with page number
+
+        # Draw the footer image
+        if os.path.exists(footer_image_path):
+            canvas.drawImage(
+                footer_image_path,
+                footer_image_x,
+                footer_image_y,
+                width=footer_image_width,
+                height=footer_image_height,
+                mask="auto"
+            )
+        
+        # Add "Generated on" text aligned with page number
+        footer_text_x = footer_image_x + footer_image_width + 0.2 * inch  # Space after the image
+        footer_text_y = 0.4 * inch  # Align with page number
         canvas.setFont(base_font, 9)
-        canvas.drawString(doc.leftMargin, 0.5 * inch, 
-                         f"Generated on {datetime.datetime.now().strftime('%B %d, %Y at %I:%M %p')}")
+        canvas.drawString(
+            footer_text_x,
+            footer_text_y,
+            f"Generated on {datetime.datetime.now().strftime('%B %d, %Y at %I:%M %p')}"
+        )
         canvas.drawRightString(doc.width + doc.rightMargin, 0.5 * inch, 
                              f"Page {doc.page}")
     
@@ -1354,8 +1918,9 @@ def get_esg_analysis1(user_data, api_key):
     prompt = f"""Based on this organization's profile and ESG readiness responses:
     {user_data}
     
-    Provide a 535-word analysis with specific references to the data provided, formatted
-    in narrative form with headers and paragraphs.NO NUMBERING POINTS """
+    Provide a 635-word analysis with specific references to the data provided, formatted
+    in narrative form with headers and paragraphs.NO NUMBERING POINTS 
+    -Must be in paragph form """
 
     try:
         response = client.chat.completions.create(
@@ -1647,6 +2212,29 @@ The content should be concise (around 600 words), with financial projections and
     except Exception as e:
         st.error(f"Error generating advisory and SROI analysis: {str(e)}")
         return None
+    
+def generate_summary(user_data, all_analyses, api_key):
+    client = OpenAI(api_key=api_key)
+    
+    prompt = f"""
+    As an ESG consultant specializing in Malaysian standards and frameworks:
+    Based on all previous analyses:
+    {user_data}
+    {all_analyses}
+    
+*Task*: Create a summary paragraph in narrative form in about 600 words based on the previous analysis and provide recommended actions.
+-must be in paragraph form """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        st.error(f"Error generating summary: {str(e)}")
+        return None
 
 def render_header():
     """Render application header"""
@@ -1673,15 +2261,272 @@ def get_nested_value(data, field):
     else:
         # Handle single fields
         return data.get(field, "N/A")
+import streamlit as st
+import pandas as pd
+import altair as alt
+
+def calculate_esg_readiness_scores(esg_responses):
+    """
+    Calculate ESG readiness scores from questionnaire responses
+    Returns overall and category-specific scores on a 1-5 scale
+    """
+    # [Previous scoring_map code remains the same]
+    scoring_map = {
+        "1. Have you started formal ESG initiatives within your organization?": {
+            "No, we haven't started yet.": 1,
+            "Yes, we've started basic efforts but lack a structured plan.": 2,
+            "Yes, we have a formalized ESG framework in place.": 3,
+            "Yes, we are actively implementing and reporting ESG practices.": 4,
+            "Yes, practices are monitored, tracked to work towards our ESG goals.": 5
+        },
+        "2. What is your primary reason for considering ESG initiatives?": {
+            "To regularise because of sanctions imposed by regulators":1,
+            "To comply with regulations and avoid penalties.": 2,
+            "To improve reputation and meet stakeholder demands.": 3,
+            "To attract investors or access green funding.": 4,
+            "To align with broader sustainability and ethical goals.": 5
+        },
+        "3. Do you have a team or individual responsible for ESG in your organization?": {
+            "No, there is no one currently assigned to ESG matters.": 1,
+            "Yes, but they are not exclusively focused on ESG.": 2,
+            "Yes, we have a dedicated ESG team or officer.": 3,
+            "Yes, and we also involve external advisors for support.": 4,
+            "There is a framework with top-down board involvement.": 5
+        },
+        "4. Are you aware of the ESG standards relevant to your industry?": {
+            "No, I am unfamiliar with industry-specific ESG standards.": 1,
+            "I've heard of them but don't fully understand how to apply them.": 2,
+            "Yes, I am somewhat familiar and have started researching.": 3,
+            "Yes, and we have begun aligning our operations with these standards.": 4,
+            "Have full frameworks for compliance with all required standards.": 5
+        },
+        "5. Do you currently measure your environmental or social impacts?": {
+            "No, we have not started measuring impacts.": 1,
+            "Yes, we measure basic indicators (e.g., waste, energy use).": 2,
+            "Yes, we measure basic Scope1/Scope2 and less than 2 parameters S3 with no tracking system.": 3,
+            "Yes, we track a range of metrics but need a better system.": 4,
+            "Yes, we have comprehensive metrics with detailed reports.": 5
+        },
+        "6. What is your biggest challenge in starting or scaling ESG initiatives?": {
+            "Lack of knowledge, awareness and expertise.": 1,
+            "Insufficient budget and resources.": 2,
+            "No ESG Culture": 3,
+            "Difficulty aligning ESG goals with business priorities.": 4,
+            "Regulatory complexity and compliance requirements.": 5
+        },
+        "7. Carbon Footprint/GHG Protocol": {
+            "No carbon footprint calculations.": 1,
+            "Scope 1/Scope 2 internally available - not published.": 2,
+            "Scope 1/Scope 2 published - websites etc.": 3,
+            "Working towards targets for carbon footprint reduction.": 4,
+            "Aligned with international guidelines (under guidelines of GHG Protocol, SDG Goals etc).": 5
+        },
+        "8. Other parameters": {
+            "No detailed parameter calculations.": 1,
+            "Scope 1/Scope 2 internally available - not published.": 2,
+            "Scope 1/Scope 2 published - websites etc.": 3,
+            "Working towards targets for carbon footprint reduction.": 4,
+            "Aligned with international guidelines (under guidelines of GHG Protocol, SDG Goals etc).": 5
+        },
+        "9. Social": {
+            "No detailed parameter calculations.": 1,
+            "Minimum compliance, penalized from regulatory bodies in past 3 years.": 2,
+            "Compliant with local/international human rights/labour law compliance standards.": 3,
+            "Compliant - no sanctions, detailed parameters (Diversity numbers, Employee participation, Inclusion policies published online).": 4,
+            "As above, having received compliance recognition from regulatory bodies.": 5
+        },
+        "10. Governance": {
+            "No ESG dedicated team.": 1,
+            "Very basic governance.": 2,
+            "Governance policies (ABC, Code of Conduct) published in website.": 3,
+            "Very comprehensive policy with dedicated ESG head.": 4,
+            "Governance aligned with international standard practices.": 5
+        }
+    }
+    
+    # Calculate scores
+    scores = []
+    category_scores = {
+        'Strategic Readiness': [], # Questions 1-3
+        'Understanding & Measurement': [], # Questions 4-6
+        'Implementation & Reporting': [], # Questions 7-8
+        'Social & Governance': [] # Questions 9-10
+    }
+    
+    for question, answer in esg_responses.items():
+        if question in scoring_map and answer in scoring_map[question]:
+            score = scoring_map[question][answer]
+            scores.append(score)
+            
+            # Add to appropriate category
+            if question.startswith(('1.', '2.', '3.')):
+                category_scores['Strategic Readiness'].append(score)
+            elif question.startswith(('4.', '5.', '6.')):
+                category_scores['Understanding & Measurement'].append(score)
+            elif question.startswith(('7.', '8.')):
+                category_scores['Implementation & Reporting'].append(score)
+            elif question.startswith(('9.', '10.')):
+                category_scores['Social & Governance'].append(score)
+    
+    # Calculate averages
+    overall_score = sum(scores) / len(scores) if scores else 0
+    category_averages = {
+        category: sum(scores) / len(scores) if scores else 0
+        for category, scores in category_scores.items()
+    }
+
+    # Calculate readiness level
+    def get_readiness_level(score):
+        if score < 1.5:
+            return "Initial Stage"
+        elif score < 2.5:
+            return "Developing"
+        elif score < 3.5:
+            return "Established"
+        elif score < 4.5:
+            return "Advanced"
+        else:
+            return "Leading"
+    
+    readiness_level = get_readiness_level(overall_score)
+    
+    return {
+        'overall_score': overall_score,
+        'readiness_level': readiness_level,
+        'category_scores': category_averages,
+        'individual_scores': dict(zip(esg_responses.keys(), scores))
+    }
+
+def display_esg_readiness_scores(scores):
+    """
+    Display ESG readiness scores using Streamlit and Altair
+    """
+    # Create columns for the overall assessment dashboard
+    st.markdown("### Overall ESG Assessment Dashboard")
+    metric_cols = st.columns(3)
+    
+    with metric_cols[0]:
+        st.metric(
+            label="Overall Score",
+            value=f"{scores['overall_score']:.2f}/5.0",
+            delta=None
+        )
+    
+    with metric_cols[1]:
+        st.metric(
+            label="Readiness Level",
+            value=scores['readiness_level'],
+            delta=None
+        )
+    
+    with metric_cols[2]:
+        # Calculate percentage score
+        percentage = (scores['overall_score'] / 5) * 100
+        st.metric(
+            label="ESG Maturity",
+            value=f"{percentage:.1f}%",
+            delta=None
+        )
+    
+    st.markdown("---")
+    
+    # Create two columns for charts
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        # Original category chart
+        chart_data = pd.DataFrame({
+            'Category': list(scores['category_scores'].keys()),
+            'Score': list(scores['category_scores'].values())
+        })
+        
+        category_chart = alt.Chart(chart_data).mark_bar().encode(
+            x=alt.X('Category:N', title='Categories'),
+            y=alt.Y('Score:Q', 
+                   scale=alt.Scale(domain=[0, 5]), 
+                   title='Score (1-5)'),
+            color=alt.value('#1F77B4'),
+            tooltip=['Category', 'Score']
+        ).properties(
+            title='Category Assessment Scores',
+            height=400
+        )
+        
+        st.altair_chart(category_chart, use_container_width=True)
+    
+    with col2:
+        # Score interpretation
+        st.markdown("### Score Interpretation")
+        st.markdown("""
+        - **1.0-1.5:** Initial Stage
+        - **1.6-2.5:** Developing
+        - **2.6-3.5:** Established
+        - **3.6-4.5:** Advanced
+        - **4.6-5.0:** Leading
+        """)
+    
+    # Add detailed questionnaire dashboard
+    st.markdown("### Detailed Question Analysis")
+    
+    # Prepare data for detailed question analysis
+    question_data = []
+    for question, score in scores['individual_scores'].items():
+        # Extract question number and shorten question text
+        q_num = question.split('.')[0]
+        q_text = ' '.join(question.split()[1:])[:50] + "..." if len(' '.join(question.split()[1:])) > 50 else ' '.join(question.split()[1:])
+        question_data.append({
+            'Question Number': q_num,
+            'Question': q_text,
+            'Score': score
+        })
+    
+    df_questions = pd.DataFrame(question_data)
+    
+    # # Create detailed question chart
+    # question_chart = alt.Chart(df_questions).mark_bar().encode(
+    #     x=alt.X('Question Number:N', title='Question'),
+    #     y=alt.Y('Score:Q', scale=alt.Scale(domain=[0, 5]), title='Rating'),
+    #     color=alt.value('#2B6CB0'),
+    #     tooltip=['Question', 'Score']
+    # ).properties(
+    #     title='Question-wise Assessment Scores',
+    #     height=300
+    # )
+    
+    # st.altair_chart(question_chart, use_container_width=True)
+    
+    # Display detailed scores table
+    st.markdown("### Detailed Scores")
+    
+    # Format detailed scores for display
+    detailed_scores = pd.DataFrame({
+        'Question': list(scores['individual_scores'].keys()),
+        'Score': list(scores['individual_scores'].values())
+    })
+    detailed_scores['Score'] = detailed_scores['Score'].round(2)
+    
+    st.dataframe(
+        detailed_scores,
+        hide_index=True,
+        column_config={
+            "Question": st.column_config.TextColumn("Question"),
+            "Score": st.column_config.NumberColumn(
+                "Score",
+                format="%.2f",
+                min_value=1,
+                max_value=5
+            )
+        }
+    )
 def main():
     st.set_page_config(page_title="ESG Starter's Kit", layout="wide")
     st.title("ESG Starter's Kit")
     render_header()
 
     with st.sidebar:
-        api_key = st.text_input("Your Access Key", type="password")
+        api_key = st.text_input("Your Secret Key", type="password")
         if not api_key:
-            st.warning("Please enter your Access key to continue.")
+            st.warning("Please enter your Secret key to continue.")
             return
 
     if 'current_step' not in st.session_state:
@@ -1730,9 +2575,17 @@ def main():
                             "esg_responses": esg_responses
                         }
                         
+                        # Calculate ESG readiness scores
+                        scores = calculate_esg_readiness_scores(esg_responses)
+                        st.session_state.esg_scores = scores
+                        
+                        # Display the scores visualization
+                        # display_esg_readiness_scores(scores)
+                        
+                        # Continue with your existing analysis
                         with st.spinner("Analyzing ESG readiness..."):
                             st.session_state.analysis1 = get_esg_analysis1(
-                                st.session_state.user_data, 
+                                {**st.session_state.user_data, 'esg_scores': scores}, 
                                 api_key
                             )
                         st.session_state.current_step = 1
@@ -1741,7 +2594,17 @@ def main():
         elif "user_data" in st.session_state:
             st.success("✓ Organization Profile Completed")
             with st.expander("View Initial Assessment"):
-                st.markdown(st.session_state.analysis1)
+                # Create tabs for different views
+                tab1, tab2 = st.tabs(["ESG Scores", "Detailed Analysis"])
+                
+                with tab1:
+                    # Display ESG readiness scores
+                    if 'esg_scores' in st.session_state:
+                        display_esg_readiness_scores(st.session_state.esg_scores)
+                
+                with tab2:
+                    # Display the text analysis
+                    st.markdown(st.session_state.analysis1)
 
     if st.session_state.current_step >= 1:
         st.write("## Framework Selection")
@@ -1839,7 +2702,8 @@ def main():
                 'analysis2': st.session_state.analysis2,
                 'management_questions': st.session_state.management_questions,
                 'question_rationale': st.session_state.question_rationale,
-                'implementation_challenges': st.session_state.implementation_challenges
+                'implementation_challenges': st.session_state.implementation_challenges,
+                'esg_score':st.session_state.esg_scores
             }
             with st.spinner("Generating advisory plan..."):
                 st.session_state.advisory = generate_advisory_analysis(
@@ -1863,10 +2727,16 @@ def main():
                 'management_questions': st.session_state.management_questions,
                 'question_rationale': st.session_state.question_rationale,
                 'implementation_challenges': st.session_state.implementation_challenges,
-                'advisory': st.session_state.advisory
+                'advisory': st.session_state.advisory,
+                'esg_score':st.session_state.esg_scores
             }
             with st.spinner("Generating SROI model..."):
                 st.session_state.sroi = generate_sroi_analysis(
+                    st.session_state.user_data,
+                    all_analyses,
+                    api_key
+                )
+                st.session_state.summary = generate_summary(
                     st.session_state.user_data,
                     all_analyses,
                     api_key
@@ -1944,12 +2814,17 @@ def main():
                         'management_questions': st.session_state.management_questions,
                         'implementation_challenges': st.session_state.implementation_challenges,
                         'advisory': st.session_state.advisory,
-                        'sroi': st.session_state.sroi
+                        'sroi': st.session_state.sroi,
+                    }
+                    summary_data = {
+                        'analysis1': st.session_state.analysis1,
+                        'esg_scores': st.session_state.esg_scores,
+                        'summary': st.session_state.summary
                     }
                     
                     personal_info = {
                         'name': st.session_state.user_data['organization_name'],
-                        'industry': st.session_state.user_data['industry'],
+                        'industry': st.session_state.user_data['industry'], 
                         'full_name': st.session_state.user_data['full_name'],
                         'mobile_number': st.session_state.user_data['mobile_number'],
                         'email': st.session_state.user_data['email'],
@@ -1957,13 +2832,16 @@ def main():
                     }
                     
                     # Generate reports
-                    pdf_buffer = generate_pdf(esg_data, personal_info, [4, 6, 8, 11, 13, 15])
+                    pdf_buffer = generate_pdf(esg_data, personal_info, [4, 7, 11, 15, 18, 21])
+                    pdf_buffer2 = generate_pdf_summary(summary_data, personal_info, [6, 7, 8, 11, 13, 15])
+
                     excel_buffer = generate_excel_report(st.session_state.user_data)
                     
                     # Prepare attachments
                     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M')
                     attachments = [
                         (pdf_buffer, f"esg_assessment_{timestamp}.pdf", "application/pdf"),
+                        (pdf_buffer2, f"esg_starterkit_{timestamp}.pdf", "application/pdf"),
                         (excel_buffer, f"esg_input_data_{timestamp}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                     ]
                     
@@ -2007,6 +2885,12 @@ ESG Assessment Team""",
                         "📥 Download ESG Assessment Report",
                         data=pdf_buffer,
                         file_name=f"esg_assessment_{timestamp}.pdf",
+                        mime="application/pdf"
+                    )
+                    st.download_button(
+                        "📥 Download ESG starterkit Report",
+                        data=pdf_buffer2,
+                        file_name=f"esg_StarterKit_{timestamp}.pdf",
                         mime="application/pdf"
                     )
                     
