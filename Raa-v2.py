@@ -65,8 +65,10 @@ import ssl
 import logging
 # 17/12/2024
 # Email Configuration
-
-
+EMAIL_SENDER = "emma@ceaiglobal.com"
+EMAIL_PASSWORD = "MyFinB2024123#"
+SMTP_SERVER = "mail.ceaiglobal.com"
+SMTP_PORT = 465
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
