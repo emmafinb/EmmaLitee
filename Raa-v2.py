@@ -63,7 +63,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 import ssl
 import logging
-# 11/12/2024
+# 17/12/2024
 # Email Configuration
 EMAIL_SENDER = "emma@ceaiglobal.com"
 EMAIL_PASSWORD = "MyFinB2024123#"
@@ -433,7 +433,7 @@ def create_esg_score_charts(scores, styles, elements):
 
     # Add dashboard title
     elements.append(Spacer(1, 0.2*inch))
-    elements.append(Paragraph("ESG Readiness Dashboard", title_style))
+    elements.append(Paragraph("ESG Readiness", title_style))
     elements.append(Spacer(1, 0.2*inch))
 
     # Create metric cards
@@ -714,6 +714,7 @@ def generate_pdf(esg_data, personal_info, toc_page_numbers):
     
     # Section data
     section_data = [
+        ("Executive Summary", esg_data['summary']),
         ("ESG Initial Assessment", esg_data['analysis1']),
         ("Framework Analysis", esg_data['analysis2']),
         ("Management Issues", esg_data['management_questions']),
@@ -730,7 +731,9 @@ def generate_pdf(esg_data, personal_info, toc_page_numbers):
 
     # Add TOC entries
     static_entry = create_toc_entry(1, "Profile Analysis", 3)
+    summary_entry = create_toc_entry(2, "ESG Readiness", 4)  # Create entry #2
     elements.append(Paragraph(static_entry, toc_style))
+    elements.append(Paragraph(summary_entry, toc_style))
     
     for i, ((title, _), page_num) in enumerate(zip(section_data, toc_page_numbers), 2):
         toc_entry = create_toc_entry(i, title, page_num)
@@ -743,7 +746,8 @@ def generate_pdf(esg_data, personal_info, toc_page_numbers):
     elements.append(PageBreak())
     
     # Add ESG scores chart if available
-    
+    if 'esg_scores' in esg_data:
+        create_esg_score_charts(esg_data['esg_scores'], styles, elements)
     # Add main content
     for i, (title, content) in enumerate(section_data):
         elements.append(Paragraph(title, styles['heading']))
@@ -1016,7 +1020,7 @@ def create_disclaimer_page(styles, elements):
             fontName=bold_font,
             leading=28,
             spaceBefore=0,
-            spaceAfter=10,
+            spaceAfter=20,
         ),
         'section_header': ParagraphStyle(
             'SectionHeader',
@@ -1024,90 +1028,120 @@ def create_disclaimer_page(styles, elements):
             fontSize=11,
             fontName=bold_font,
             leading=13,
-            spaceBefore=2,
-            spaceAfter=3,
+            spaceBefore=10,
+            spaceAfter=5,
         ),
         'body_text': ParagraphStyle(
             'BodyText',
             parent=styles['normal'],
             fontSize=9,
             fontName=base_font,
-            leading=10,
-            spaceBefore=1,
-            spaceAfter=3,
-            alignment=TA_JUSTIFY,
-        ),
-        'item_header': ParagraphStyle(
-            'ItemHeader',
-            parent=styles['normal'],
-            fontSize=9,
-            fontName=bold_font,
             leading=11,
-            spaceBefore=4,
-            spaceAfter=1,
-        ),
-        'confidential': ParagraphStyle(
-            'Confidential',
-            parent=styles['normal'],
-            fontSize=8,
-            fontName=base_font,
-            textColor=colors.black,
-            alignment=TA_CENTER,
-            spaceBefore=1,
+            spaceBefore=2,
+            spaceAfter=5,
+            alignment=TA_JUSTIFY,
         )
-    }    
-    # Main Content
+    }
+    
+    # Title    
+    # Introduction
+    elements.append(Paragraph("Introduction", disclaimer_styles['section_header']))
+    elements.append(Paragraph(
+        "The increasing application of Artificial Intelligence (AI) in evaluating financial risks and business strategies "
+        "reflects the growing trend towards data driven decision making. AI's ability to analyze vast datasets, identify "
+        "patterns, and generate insights can significantly enhance the quality of financial and strategic evaluations. "
+        "However, it is crucial to understand that AI tools, while powerful, have limitations and inherent risks. This "
+        "disclaimer outlines the general considerations and limitations of using AI for such evaluations and clarifies the "
+        "position of RAA Capital Partners Sdn Bhd ('RAA') and its advisory partners.",
+        disclaimer_styles['body_text']
+    ))
+
+    # Limitations Section
     elements.append(Paragraph("Limitations of AI in Financial and Strategic Evaluations", 
                             disclaimer_styles['section_header']))
 
-    # AI Limitations Section
     limitations = [
         ("1. Data Dependency and Quality",
-         "AI models rely heavily on the quality and completeness of the data fed into them. The accuracy of the analysis is contingent upon the integrity of the input data. Inaccurate, outdated, or incomplete data can lead to erroneous conclusions and recommendations. Users should ensure that the data used in AI evaluations is accurate and up-to-date."),
+         "AI models rely heavily on the quality and completeness of the data fed into them. The accuracy of the analysis "
+         "is contingent upon the integrity of the input data. Inaccurate, outdated, or incomplete data can lead to erroneous "
+         "conclusions and recommendations. Users should ensure that the data used in AI evaluations is accurate and "
+         "up to date."),
         
         ("2. Algorithmic Bias and Limitations",
-         "AI algorithms are designed based on historical data and predefined models. They may inadvertently incorporate biases present in the data, leading to skewed results. Additionally, AI models might not fully capture the complexity and nuances of human behavior or unexpected market changes, potentially impacting the reliability of the analysis."),
+         "AI algorithms are designed based on historical data and predefined models. They may inadvertently incorporate "
+         "biases present in the data, leading to skewed results. Additionally, AI models might not fully capture the "
+         "complexity and nuances of human behavior or unexpected market changes, potentially impacting the reliability of "
+         "the analysis."),
         
         ("3. Predictive Limitations",
-         "While AI can identify patterns and trends, it cannot predict future events with certainty. Financial markets and business environments are influenced by numerous unpredictable factors such as geopolitical events, economic fluctuations, and technological advancements. AI's predictions are probabilistic and should not be construed as definitive forecasts."),
+         "While AI can identify patterns and trends, it cannot predict future events with certainty. Financial markets and "
+         "business environments are influenced by numerous unpredictable factors such as geopolitical events, "
+         "economic fluctuations, and technological advancements. AI's predictions are probabilistic and should not be "
+         "construed as definitive forecasts."),
         
         ("4. Interpretation of Results",
-         "AI-generated reports and analyses require careful interpretation. The insights provided by AI tools are based on algorithms and statistical models, which may not always align with real-world scenarios. It is essential to involve human expertise in interpreting AI outputs and making informed decisions."),
+         "AI-generated reports and analyses require careful interpretation. The insights provided by AI tools are based on "
+         "algorithms and statistical models, which may not always align with real-world scenarios. It is essential to involve "
+         "human expertise in interpreting AI outputs and making informed decisions."),
         
         ("5. Compliance and Regulatory Considerations",
-         "The use of AI in financial evaluations and business strategy formulation must comply with relevant regulations and standards. Users should be aware of legal and regulatory requirements applicable to AI applications in their jurisdiction and ensure that their use of AI tools aligns with these requirements.")
+         "The use of AI in financial evaluations and business strategy formulation must comply with relevant regulations "
+         "and standards. Users should be aware of legal and regulatory requirements applicable to AI applications in their "
+         "jurisdiction and ensure that their use of AI tools aligns with these requirements.")
     ]
 
     for title, content in limitations:
-        elements.append(Paragraph(title, disclaimer_styles['item_header']))
+        elements.append(Paragraph(title, disclaimer_styles['section_header']))
         elements.append(Paragraph(content, disclaimer_styles['body_text']))
 
-    # RAA Capital Partners Section
+    # RAA Disclaimer Section
     elements.append(Paragraph("RAA Capital Partners Sdn Bhd and Advisory Partners' Disclaimer",
                             disclaimer_styles['section_header']))
 
     elements.append(Paragraph(
-        "RAA Capital Partners Sdn Bhd, Centre for AI Innovation (CEAI) and its advisory partners provide AI-generated reports and insights as a tool to assist in financial and business strategy evaluations. However, the use of these AI-generated analyses is subject to the following disclaimers:",
+        "RAA Capital Partners Sdn Bhd and its advisory partners provide AI-generated reports and insights as a tool to "
+        "assist in financial and business strategy evaluations. However, the use of these AI-generated analyses is "
+        "subject to the following disclaimers:",
         disclaimer_styles['body_text']
     ))
 
     disclaimers = [
         ("1. No Guarantee of Accuracy or Completeness",
-         "While RAA Capital Partners Sdn Bhd, Centre for AI Innovation (CEAI) and its advisory partners strive to ensure that the AI-generated reports and insights are accurate and reliable, we do not guarantee the completeness or accuracy of the information provided. The insights are based on the data and models used, which may not fully account for all relevant factors or changes in the market."),
+         "While RAA and its advisory partners strive to ensure that the AI-generated reports and insights are accurate "
+         "and reliable, we do not guarantee the completeness or accuracy of the information provided. The insights are "
+         "based on the data and models used, which may not fully account for all relevant factors or changes in the "
+         "market."),
         
         ("2. Not Financial or Professional Advice",
-         "The AI-generated reports and insights are not intended as financial, investment, legal, or professional advice. Users should consult with qualified professionals before making any financial or strategic decisions based on AI-generated reports. RAA Capital Partners Sdn Bhd, Centre for AI Innovation (CEAI) and its advisory partners are not responsible for any decisions made based on the reports provided."),
+         "The AI-generated reports and insights are not intended as financial, investment, legal, or professional advice. Users "
+         "should consult with qualified professionals before making any financial or strategic decisions based on AI-generated "
+         "reports. RAA and its advisory partners are not responsible for any decisions made based on the reports provided."),
         
         ("3. Limitation of Liability",
-         "RAA Capital Partners Sdn Bhd, Centre for AI Innovation (CEAI) and its advisory partners shall not be liable for any loss or damage arising from the use of AI-generated reports and insights. This includes, but is not limited to, any direct, indirect, incidental, or consequential damages resulting from reliance on the reports or decisions made based on them."),
+         "RAA and its advisory partners shall not be liable for any loss or damage arising from the use of AI-generated "
+         "reports and insights. This includes, but is not limited to, any direct, indirect, incidental, or consequential damages "
+         "resulting from reliance on the reports or decisions made based on them."),
         
         ("4. No Endorsement of Third-Party Tools",
-         "The use of third-party tools and data sources in AI evaluations is at the user's discretion. RAA Capital Partners Sdn Bhd, Centre for AI Innovation (CEAI) and its advisory partners do not endorse or guarantee the performance or accuracy of any third-party tools or data sources used in conjunction with the AI-generated reports.")
+         "The use of third-party tools and data sources in AI evaluations is at the user's discretion. RAA and its advisory "
+         "partners do not endorse or guarantee the performance or accuracy of any third-party tools or data sources used "
+         "in conjunction with the AI-generated reports.")
     ]
 
     for title, content in disclaimers:
-        elements.append(Paragraph(title, disclaimer_styles['item_header']))
+        elements.append(Paragraph(title, disclaimer_styles['section_header']))
         elements.append(Paragraph(content, disclaimer_styles['body_text']))
+
+    # Conclusion
+    elements.append(Paragraph("Conclusion", disclaimer_styles['section_header']))
+    elements.append(Paragraph(
+        "AI provides valuable insights and enhances decision making capabilities in financial risk assessment and "
+        "business strategy development. However, users must recognize the limitations and risks associated with AI "
+        "applications. RAA and its advisory partners emphasize the importance of combining AI-generated insights with "
+        "professional judgment and expertise. Users should carefully consider the limitations outlined in this disclaimer "
+        "and seek professional advice when making significant financial or strategic decisions.",
+        disclaimer_styles['body_text']
+    ))
 
 
 def clean_text(text):
@@ -1930,7 +1964,7 @@ def get_esg_analysis1(user_data, api_key):
     {user_data}
     
     Provide a 635-word analysis with specific references to the data provided, formatted
-    in narrative form with headers and paragraphs.NO NUMBERING POINTS 
+    in narrative form with headers and paragraphs. 
     -Must be in paragph form """
 
     try:
@@ -2051,7 +2085,7 @@ Write in narrative form (450 words) with headers and Numbering points(no bullet 
 - Implementation recommendations
 
 *Model Illustration*
--Create a summary table with a basic explanation based on the above(must be in table format)
+-Create a summary table with a basic explanation based on the above(must be in table format).
 
 Focus on practical implementation while acknowledging the complexity of managing multiple frameworks."""
 
@@ -2107,7 +2141,7 @@ def generate_question_rationale(questions, analysis1, analysis2, api_key):
     - Framework citations
 
     *Model Illustration*
-    -Create a summary table with a basic explanation based on the above(must be in table format)
+    -Create a summary table with a basic explanation based on the above(must be in table format).
     The content should be concise (around 600 words) with supporting facts and specific reference, with Model Illustration and outcomes presented clearly in a table.
 """
 
@@ -2134,15 +2168,15 @@ def generate_implementation_challenges(analysis1, analysis2, questions, api_key)
     {questions}
     
     Provide bullet points analysis of potential ESG implementation challenges covering:
-    1. Human Capital Availability and Expertise
-    2. Budgeting and Financial Resources
-    3. Infrastructure
-    4. Stakeholder Management
-    5. Regulatory Compliance
-    6. Other Challenges
+    1. *Human Capital Availability and Expertise*
+    2. *Budgeting and Financial Resources*
+    3. *Infrastructure*
+    4. *Stakeholder Management*
+    5. *Regulatory Compliance*
+    6. *Other Challenges*
 
     *Model Illustration*
-    -Create a summary table with a basic explanation based on the above(must be in table format)
+    -Create a summary table with a basic explanation based on the above(must be in table format).
 
     The content should be concise (around 600 words) with supporting facts and specific reference, with Model Illustration and outcomes presented clearly in a table.
     """
@@ -2165,14 +2199,14 @@ def generate_advisory_analysis(user_data, all_analyses, api_key):
     {user_data}
     {all_analyses}
     
-     (480 words): Explain what and how ESG Advisory team can assist in numbering points, including:
+     (500 words): Explain what and how ESG Advisory team can assist in heading and subheading, including:
     - Implementation support methods
     - Technical expertise areas
     - Training programs
     - Monitoring systems
 
     *Model Illustration*
-    -Create a summary table with a basic explanation based on the above(must be in table format)
+    -Create a summary table with a basic explanation based on the above(must be in table format).
     
     Include supporting facts, figures, and statistical references."""
 
@@ -2225,27 +2259,92 @@ The content should be concise (around 600 words), with financial projections and
         return None
     
 def generate_summary(user_data, all_analyses, api_key):
+    """
+    Generates an ESG executive summary using OpenAI API with specific Malaysian ESG formatting.
+    
+    Args:
+        user_data (dict): Company-specific ESG data
+        all_analyses (dict): Detailed analyses and metrics
+        api_key (str): OpenAI API key
+    
+    Returns:
+        str: Formatted executive summary
+    """
     client = OpenAI(api_key=api_key)
     
     prompt = f"""
-    As an ESG consultant specializing in Malaysian standards and frameworks:
-    Based on all previous analyses:
+    As an ESG consultant specializing in Malaysian standards and frameworks, create an executive summary based on the provided data and analyses. The summary should follow this exact structure:
+
+    **Executive Summary of the ESG Readiness Report for [Company Name]**
+
+    **Overview**
+    [One paragraph describing the company's current ESG status, goals, and high-level challenges]
+
+    **ESG Readiness**
+    [Company Name] achieved an overall ESG score of [X.XX], placing it in the "[Category]" readiness category with a [XX]% ESG maturity level. The score reflects:
+    * **Strategic Readiness:** [Brief description]
+    * **Understanding & Measurement:** [Brief description]
+    * **Implementation & Reporting:** [Brief description]
+    * **Social & Governance Performance:** [Brief description]
+
+    The company's highest-scoring initiatives include [specific initiatives with scores] and [other initiatives]. However, key challenges include [specific challenges with scores].
+
+    **Challenges Identified**
+    [Company Name] faces several barriers in its ESG journey:
+    * [Challenge 1]
+    * [Challenge 2]
+    * [Challenge 3]
+    * [Challenge 4]
+
+    **Initial Actions Required**
+    The organization is recommended to undertake the following steps:
+    1. [Action 1]
+    2. [Action 2]
+    3. [Action 3]
+    4. The importance of complying with frameworks such as:
+       * [Framework 1]
+       * [Framework 2]
+
+    **Recommended Enhancements**
+    1. **Develop Dedicated ESG Roles:** [Description]
+    2. **Improve Measurement & Reporting:** [Description]
+    3. **Strengthen Governance Practices:** [Description]
+    4. **Harmonize ESG Frameworks:** [Description]
+
+    **Conclusion**
+    [One paragraph summarizing current status, key challenges, and future potential]
+
+    Using this data as context:
     {user_data}
     {all_analyses}
-    
-*Task*: Create a summary paragraph in narrative form in about 600 words based on the previous analysis and provide recommended actions.
--must be in paragraph form """
+    """
 
     try:
         response = client.chat.completions.create(
             model="gpt-4-turbo-preview",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
+            messages=[
+                {"role": "system", "content": "You are an ESG consultant specializing in Malaysian standards and frameworks. Create an executive summary following the exact format provided."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=2000
         )
-        return response.choices[0].message.content
+        
+        # Extract the generated summary
+        summary = response.choices[0].message.content
+        
+        # Format the response to ensure consistent styling
+        
+        # Ensure proper spacing after headers
+        summary = re.sub(r'(\*\*.*?\*\*)\n(?!\n)', r'\1\n\n', summary)
+        
+        # Ensure proper indentation for sub-bullets
+        summary = re.sub(r'(\n\s{3}\*)', r'\n   *', summary)
+        
+        return summary
+        
     except Exception as e:
-        st.error(f"Error generating summary: {str(e)}")
-        return None
+        return f"Error generating summary: {str(e)}"
 
 def render_header():
     """Render application header"""
@@ -2820,6 +2919,8 @@ def main():
             try:
                 with st.spinner("Generating and sending report..."):
                     esg_data = {
+                        'esg_scores': st.session_state.esg_scores,
+                        'summary': st.session_state.summary,
                         'analysis1': st.session_state.analysis1,
                         'analysis2': st.session_state.analysis2,
                         'management_questions': st.session_state.management_questions,
@@ -2843,8 +2944,8 @@ def main():
                     }
                     
                     # Generate reports
-                    pdf_buffer = generate_pdf(esg_data, personal_info, [4, 7, 11, 15, 18, 21])
-                    pdf_buffer2 = generate_pdf_summary(summary_data, personal_info, [6, 7, 8, 11, 13, 15])
+                    pdf_buffer = generate_pdf(esg_data, personal_info, [6, 8, 11, 15, 18, 21,24,26])
+                    # pdf_buffer2 = generate_pdf_summary(summary_data, personal_info, [6, 7, 8, 11, 13, 15])
 
                     excel_buffer = generate_excel_report(st.session_state.user_data)
                     
@@ -2852,7 +2953,7 @@ def main():
                     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M')
                     attachments = [
                         (pdf_buffer, f"esg_assessment_{timestamp}.pdf", "application/pdf"),
-                        (pdf_buffer2, f"esg_starterkit_{timestamp}.pdf", "application/pdf"),
+                        # (pdf_buffer2, f"esg_starterkit_{timestamp}.pdf", "application/pdf"),
                         (excel_buffer, f"esg_input_data_{timestamp}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                     ]
                     
@@ -2898,12 +2999,12 @@ ESG Assessment Team""",
                         file_name=f"esg_assessment_{timestamp}.pdf",
                         mime="application/pdf"
                     )
-                    st.download_button(
-                        "📥 Download ESG starterkit Report",
-                        data=pdf_buffer2,
-                        file_name=f"esg_StarterKit_{timestamp}.pdf",
-                        mime="application/pdf"
-                    )
+                    # st.download_button(
+                    #     "📥 Download ESG starterkit Report",
+                    #     data=pdf_buffer2,
+                    #     file_name=f"esg_StarterKit_{timestamp}.pdf",
+                    #     mime="application/pdf"
+                    # )
                     
                     st.download_button(
                         "📥 Download Input Data (Excel)",
